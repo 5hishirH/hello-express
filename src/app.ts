@@ -20,7 +20,7 @@ const fileStore = new S3Store(
   process.env.SUPABASE_ENDPOINT!,
   process.env.SUPABASE_ACCESS_KEY!,
   process.env.SUPABASE_SECRET_KEY!,
-  process.env.BUCKET!,
+  process.env.SUPABASE_BUCKET!,
   process.env.SUPABASE_REGION!,
 );
 const authService = new AuthService(fileStore);
