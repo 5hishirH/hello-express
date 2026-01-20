@@ -7,6 +7,7 @@ export function getTimestampString(date = new Date()): string {
   const hh = pad(date.getHours());
   const min = pad(date.getMinutes());
   const ss = pad(date.getSeconds());
+  const ms = pad(date.getMilliseconds())
 
-  return `${yyyy}-${mm}-${dd}-${hh}-${min}-${ss}`;
+  return `${yyyy}-${mm}-${dd}-${hh}-${min}-${ss}-${ms}`;
 }

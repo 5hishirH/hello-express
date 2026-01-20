@@ -2,7 +2,6 @@ import ms from "ms";
 import { AuthResponse, UserDto } from "../dtos";
 import { RegisterInput } from "../validators";
 import { FileStore } from "../utils";
-import { getTimestampString } from "../utils/get-timestamp-string";
 
 export class AuthService {
   constructor(
@@ -19,7 +18,7 @@ export class AuthService {
     },
     refreshTokenExpiry: ms.StringValue,
   ): Promise<AuthResponse> {
-    const fileName = `${this.folderName}/${getTimestampString()}.${fileMeta.ext}`;
+    const fileName = `${this.folderName}/${user.email}.${fileMeta.ext}`;
 
     await this.fileStore.put(fileName, buffer, fileMeta.mime);
 
