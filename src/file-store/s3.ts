@@ -5,8 +5,7 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
-
-type FileBody = Buffer | Uint8Array | Blob | string;
+import { FileBody } from "../types";
 
 export class S3Store {
   private client: S3Client;

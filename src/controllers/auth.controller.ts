@@ -1,10 +1,26 @@
 import { Response } from "express";
 import { StringValue } from "ms";
-import { asyncHandler, HttpResponse, IRequest } from "../utils";
-import { LoginInput } from "../validators";
+import {
+  AppError,
+  asyncHandler,
+  checkFileType,
+  HttpResponse,
+  IRequest,
+} from "../utils";
+import { LoginInput, RegisterInput } from "../validators";
 import { AuthResponse } from "../dtos";
 
 interface AuthService {
+  register(
+    user: RegisterInput,
+    buffer: Buffer,
+    fileMeta: {
+      ext: string;
+      mime: string;
+    },
+    expiry: StringValue,
+  ): Promise<AuthResponse>;
+
   login(
     email: string,
     password: string,
@@ -12,11 +28,38 @@ interface AuthService {
   ): Promise<AuthResponse>;
 }
 
+const checkImage = checkFileType(["jpg", "png", "webp"]);
+
 export class AuthController {
   constructor(
     private refreshTokenExpiry: StringValue,
     private s: AuthService,
   ) {}
+
+  register = asyncHandler(
+    async (req: IRequest<{}, RegisterInput>, res: Response) => {
+      if (!req.file) {
+        throw AppError.badRequest("Profile picture is required");
+      }
+
+      const { buffer } = req.file;
+
+      const { ext, mime } = await checkImage(buffer);
+
+      const { user } = await this.s.register(
+        req.body,
+        buffer,
+        { ext, mime },
+        this.refreshTokenExpiry,
+      );
+
+      return HttpResponse.created(
+        res,
+        user,
+        "The user is registered successfully",
+      );
+    },
+  );
 
   login = asyncHandler(async (req: IRequest<{}, LoginInput>, res: Response) => {
     const { email, password } = req.body;

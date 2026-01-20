@@ -40,6 +40,8 @@ export const errorHandler = (
   err.statusCode = err.statusCode || 500;
   err.success = err.success || false;
 
+  console.log(err);
+
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
   } else {
