@@ -1,5 +1,5 @@
 import { Response, NextFunction, RequestHandler } from "express";
-import { IRequest } from "./interfaces";
+import { IRequest } from "./interfaces/index.js";
 
 type AsyncRequestHandler<P = {}, B = {}, Q = {}> = (
   req: IRequest<P, B, Q>,

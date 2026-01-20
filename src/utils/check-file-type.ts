@@ -1,11 +1,11 @@
-import { fromBuffer, FileTypeResult } from "file-type";
-import { AppError } from "./app-error";
+import { fileTypeFromBuffer, FileTypeResult } from "file-type";
+import { AppError } from "./index.js";
 
 export function checkFileType(
   allowedTypes: string[] = ["jpg", "png", "webp"],
 ): (b: Buffer<ArrayBufferLike>) => Promise<FileTypeResult> {
   return async function (b: Buffer): Promise<FileTypeResult> {
-    const r = await fromBuffer(b);
+    const r = await fileTypeFromBuffer(b);
 
     if (!r || !allowedTypes.includes(r.ext)) {
       throw AppError.badRequest("Invalid file content. Expected an image");

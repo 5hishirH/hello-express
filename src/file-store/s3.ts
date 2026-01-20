@@ -5,7 +5,7 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
-import { FileBody } from "../types";
+import { FileBody } from "../types/index.js";
 
 export class S3Store {
   private client: S3Client;

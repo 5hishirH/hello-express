@@ -1,4 +1,4 @@
-import expressApp from "./app";
+import expressApp from "./app.js";
 import "dotenv/config";
 
 const startServer = async () => {

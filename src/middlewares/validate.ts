@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { AppError, asyncHandler } from "../utils";
+import { AppError, asyncHandler } from "../utils/index.js";
 
 const validate = (schema: z.ZodObject) =>
   asyncHandler(async (req, _, next) => {
@@ -26,4 +26,4 @@ const validate = (schema: z.ZodObject) =>
     }
   });
 
-export default validate;
+export { validate };

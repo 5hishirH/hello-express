@@ -6,9 +6,9 @@ import {
   checkFileType,
   HttpResponse,
   IRequest,
-} from "../utils";
-import { LoginInput, RegisterInput } from "../validators";
-import { AuthResponse } from "../dtos";
+} from "../utils/index.js";
+import { LoginInput, RegisterInput } from "../validators/index.js";
+import { AuthResponse } from "../dtos/index.js";
 
 interface AuthService {
   register(

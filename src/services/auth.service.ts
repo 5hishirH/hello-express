@@ -1,7 +1,7 @@
 import ms from "ms";
-import { AuthResponse, UserDto } from "../dtos";
-import { RegisterInput } from "../validators";
-import { FileStore } from "../utils";
+import { AuthResponse, UserDto } from "../dtos/index.js";
+import { RegisterInput } from "../validators/index.js";
+import { FileStore } from "../utils/index.js";
 
 export class AuthService {
   constructor(

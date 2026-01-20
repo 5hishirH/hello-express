@@ -1,10 +1,10 @@
 import express from "express";
-import registerAuthRoutes from "./routes/auth.routes";
-import { AuthController } from "./controllers/auth.controller";
-import { errorHandler } from "./middlewares/error-handler";
-import { AuthService } from "./services";
+import { S3Store } from "./file-store/index.js";
+import { errorHandler } from "./middlewares/index.js";
+import { AuthController } from "./controllers/index.js";
+import { AuthService } from "./services/index.js";
+import registerAuthRoutes from "./routes/auth.routes.js";
 import { StringValue } from "ms";
-import { S3Store } from "./file-store";
 import "dotenv/config";
 
 const app = express();

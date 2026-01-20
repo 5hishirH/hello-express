@@ -1,4 +1,4 @@
-import { FileBody } from "../../types";
+import { FileBody } from "../../types/index.js";
 
 export interface FileStore {
   put(key: string, body: FileBody, contentType?: string): Promise<void>;
