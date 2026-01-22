@@ -28,11 +28,11 @@ const cfgSchema = z.object({
   REFRESH_COOKIE_NAME: z.string().default("refresh_cookie"),
   REFRESH_EXPIRY: msStringSchema,
   // supabase storage
-  SUPABASE_ENDPOINT: z.string(),
-  SUPABASE_ACCESS_KEY: z.string(),
-  SUPABASE_SECRET_KEY: z.string(),
-  SUPABASE_BUCKET: z.string(),
-  SUPABASE_REGION: z.string(),
+  STORAGE_ENDPOINT: z.string(),
+  STORAGE_ACCESS_KEY: z.string(),
+  STORAGE_SECRET_KEY: z.string(),
+  STORAGE_BUCKET: z.string(),
+  STORAGE_REGION: z.string(),
 });
 
 const _cfg = cfgSchema.safeParse(process.env);

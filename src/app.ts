@@ -48,11 +48,11 @@ const refreshTokenRepository = new RefreshTokenRepository(pgPool);
 const checkImage = checkFileType(["jpg", "png", "webp"]);
 
 const fileStore = new S3Store(
-  cfg.SUPABASE_ENDPOINT,
-  cfg.SUPABASE_ACCESS_KEY,
-  cfg.SUPABASE_SECRET_KEY,
-  cfg.SUPABASE_BUCKET,
-  cfg.SUPABASE_REGION,
+  cfg.STORAGE_ENDPOINT,
+  cfg.STORAGE_ACCESS_KEY,
+  cfg.STORAGE_SECRET_KEY,
+  cfg.STORAGE_BUCKET,
+  cfg.STORAGE_REGION,
 );
 const authService = new AuthService(
   userRepository,

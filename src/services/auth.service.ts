@@ -31,6 +31,14 @@ export class AuthService {
     },
     refreshTokenDuration: number,
   ): Promise<AuthResponse> {
+    const userExists = await this.userRepo.findByEmail(u.email);
+
+    if (userExists) {
+      throw AppError.badRequest(
+        "The email is already associated with an account",
+      );
+    }
+
     const fileName = `${this.folderName}/${u.email}.${fileMeta.ext}`;
 
     await this.fileStore.put(fileName, buffer, fileMeta.mime);
@@ -63,7 +71,7 @@ export class AuthService {
     const refreshTokenExpiry = new Date(Date.now() + refreshTokenDuration);
 
     await this.refreshTokenRepo.create({
-      token: refreshTokenHash,
+      tokenHash: refreshTokenHash,
       userId: createdUser.id,
       expiry: refreshTokenExpiry,
       createdAt: timestamp,
