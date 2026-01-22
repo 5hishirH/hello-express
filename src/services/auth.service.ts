@@ -34,7 +34,7 @@ export class AuthService {
     const userExists = await this.userRepo.findByEmail(u.email);
 
     if (userExists) {
-      throw AppError.badRequest(
+      throw AppError.conflict(
         "The email is already associated with an account",
       );
     }
