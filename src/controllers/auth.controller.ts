@@ -1,5 +1,4 @@
-import { Response } from "express";
-import { StringValue } from "ms";
+import { Request, Response } from "express";
 import {
   AppError,
   asyncHandler,
@@ -7,8 +6,9 @@ import {
   HttpResponse,
   IRequest,
 } from "../utils/index.js";
-import { LoginInput, RegisterInput } from "../validators/index.js";
+import { RegisterInput } from "../validators/index.js";
 import { AuthResponse } from "../dtos/index.js";
+import { CookieOptions } from "express";
 
 interface AuthService {
   register(
@@ -18,40 +18,65 @@ interface AuthService {
       ext: string;
       mime: string;
     },
-    expiry: StringValue,
-  ): Promise<AuthResponse>;
-
-  login(
-    email: string,
-    password: string,
-    expiry: StringValue,
+    expiry: number,
   ): Promise<AuthResponse>;
 }
 
-const checkImage = checkFileType(["jpg", "png", "webp"]);
+interface CheckImage {
+  (buffer: Buffer): Promise<{ ext: string; mime: string }>;
+}
+
+interface RefreshCookieConfig {
+  name: string;
+  expiry: number;
+  isSecure: boolean;
+  sameSite: CookieOptions["sameSite"];
+}
 
 export class AuthController {
   constructor(
-    private refreshTokenExpiry: StringValue,
+    private checkImage: CheckImage,
     private s: AuthService,
+    private rCfg: RefreshCookieConfig,
   ) {}
+
+  private createSession(req: Request, userId: number, role: "admin" | "user") {
+    req.session.userId = userId;
+    req.session.userRole = role;
+  }
+
+  private handleRefreshCookie(res: Response, token: string): void {
+    res.cookie(this.rCfg.name, token, {
+      maxAge: this.rCfg.expiry,
+      httpOnly: true,
+      secure: this.rCfg.isSecure,
+      sameSite: this.rCfg.sameSite,
+    });
+  }
 
   register = asyncHandler(
     async (req: IRequest<{}, RegisterInput>, res: Response) => {
+      // file validation
       if (!req.file) {
         throw AppError.badRequest("Profile picture is required");
       }
 
       const { buffer } = req.file;
 
-      const { ext, mime } = await checkImage(buffer);
+      const { ext, mime } = await this.checkImage(buffer);
 
-      const { user } = await this.s.register(
+      const { user, refreshToken } = await this.s.register(
         req.body,
         buffer,
         { ext, mime },
-        this.refreshTokenExpiry,
+        this.rCfg.expiry,
       );
+
+      // handle session
+      this.createSession(req, user.id, user.role);
+
+      // handle refresh token
+      this.handleRefreshCookie(res, refreshToken);
 
       return HttpResponse.created(
         res,
@@ -60,16 +85,4 @@ export class AuthController {
       );
     },
   );
-
-  login = asyncHandler(async (req: IRequest<{}, LoginInput>, res: Response) => {
-    const { email, password } = req.body;
-
-    const result = await this.s.login(email, password, this.refreshTokenExpiry);
-
-    // handle session cookie
-
-    // handle refresh cookie
-
-    return HttpResponse.ok(res, result.user, "Login successful");
-  });
 }

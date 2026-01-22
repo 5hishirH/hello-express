@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1769052687496,
+      "tag": "0000_bumpy_shadowcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769057001799,
+      "tag": "0001_lying_electro",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769057592452,
+      "tag": "0002_previous_shard",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769059023735,
+      "tag": "0003_foamy_frightful_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769060077398,
+      "tag": "0004_common_slyde",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769102618877,
+      "tag": "0005_bouncy_lord_hawal",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,10 +1,12 @@
 import expressApp from "./app.js";
-import "dotenv/config";
+import { cfg } from "./configs/index.js";
+
+const port = cfg.PORT ?? 8000;
 
 const startServer = async () => {
   try {
-    expressApp.listen(8000, () => {
-      console.log(`The server is running on port 8000`);
+    expressApp.listen(port, () => {
+      console.log(`The server is running on port ${port}`);
     });
   } catch (error) {
     console.error(error);

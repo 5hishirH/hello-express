@@ -1,11 +1,17 @@
 import "dotenv/config";
-import { z } from "zod";
+import * as z from "zod";
+import ms from "ms";
+
+const msStringSchema = z
+  .string()
+  .refine((val) => ms(val as ms.StringValue) !== undefined, {
+    message: "Invalid duration format (e.g., '5m', '1d', '10s')",
+  })
+  .transform((val) => ms(val as ms.StringValue)!); // safely convert to milliseconds
 
 const cfgSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("production"),
-  PORT: z.string(),
+  NODE_ENV: z.enum(["development", "production", "code_server"]).default("production"),
+  PORT: z.coerce.number(),
   DATABASE_URL: z.string(),
   CORS_ORIGINS: z.string().transform((val) =>
     val
@@ -13,6 +19,20 @@ const cfgSchema = z.object({
       .map((origin) => origin.trim())
       .filter(Boolean),
   ),
+  // general cookie option
+  COOKIE_SAMESITE: z.enum(["none", "lax", "strict"]).default("lax"),
+  // session
+  SESSION_SECRET: z.string(),
+  SESSION_EXPIRY: msStringSchema,
+  //refresh cookie
+  REFRESH_COOKIE_NAME: z.string().default("refresh_cookie"),
+  REFRESH_EXPIRY: msStringSchema,
+  // supabase storage
+  SUPABASE_ENDPOINT: z.string(),
+  SUPABASE_ACCESS_KEY: z.string(),
+  SUPABASE_SECRET_KEY: z.string(),
+  SUPABASE_BUCKET: z.string(),
+  SUPABASE_REGION: z.string(),
 });
 
 const _cfg = cfgSchema.safeParse(process.env);
