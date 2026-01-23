@@ -3,9 +3,10 @@ import expressSession from "express-session";
 import createPgStore from "connect-pg-simple";
 import { S3Store } from "./file-store/index.js";
 import { errorHandler } from "./middlewares/index.js";
-import { AuthController } from "./controllers/index.js";
-import { AuthService } from "./services/index.js";
+import { AuthController, UserController } from "./controllers/index.js";
+import { AuthService, UserService } from "./services/index.js";
 import registerAuthRoutes from "./routes/auth.routes.js";
+import registerUserRoutes from "./routes/user.routes.js";
 import { StringValue } from "ms";
 import "dotenv/config";
 import { Pool } from "pg";
@@ -67,6 +68,11 @@ const authController = new AuthController(checkImage, authService, {
 });
 const authRoutes = registerAuthRoutes(authController);
 app.use("/api/v1/auth", authRoutes);
+
+const userService = new UserService(userRepository);
+const userController = new UserController(userService);
+const userRoutes = registerUserRoutes(userController);
+app.use("/api/v1/user", userRoutes);
 
 app.use(errorHandler);
 
