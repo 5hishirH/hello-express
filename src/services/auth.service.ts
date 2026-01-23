@@ -1,9 +1,14 @@
 import { AuthResponse } from "../dtos/index.js";
 import { RegisterInput } from "../validators/index.js";
-import { AppError, FileStore } from "../utils/index.js";
+import {
+  AppError,
+  FileStore,
+  generateRandomString,
+  hashPassword,
+  hashToken,
+  verifyPassword,
+} from "../utils/index.js";
 import { NewToken, NewUser, User } from "../db/schema.js";
-import { hashPassword } from "../utils/hash-password.js";
-import { generateRandomString, hashToken } from "../utils/sha-256-hash.js";
 
 interface UserRepository {
   create(newUser: NewUser): Promise<void>;
@@ -21,6 +26,26 @@ export class AuthService {
     private fileStore: FileStore,
     private folderName: string = "profile-pictures",
   ) {}
+
+  private async saveRefreshToken(
+    uid: number,
+    e: number,
+    timestamp: Date = new Date(),
+  ): Promise<string> {
+    const refreshToken = generateRandomString();
+    const refreshTokenHash = hashToken(refreshToken);
+    const refreshTokenExpiry = new Date(Date.now() + e);
+
+    await this.refreshTokenRepo.create({
+      tokenHash: refreshTokenHash,
+      userId: uid,
+      expiry: refreshTokenExpiry,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    return refreshToken;
+  }
 
   async register(
     u: RegisterInput,
@@ -66,21 +91,38 @@ export class AuthService {
 
     const { passwordHash: _, ...createdUser } = result;
 
-    const refreshToken = generateRandomString();
-    const refreshTokenHash = hashToken(refreshToken);
-    const refreshTokenExpiry = new Date(Date.now() + refreshTokenDuration);
-
-    await this.refreshTokenRepo.create({
-      tokenHash: refreshTokenHash,
-      userId: createdUser.id,
-      expiry: refreshTokenExpiry,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    });
+    const refreshToken = await this.saveRefreshToken(
+      createdUser.id,
+      refreshTokenDuration,
+      timestamp,
+    );
 
     return {
       refreshToken,
       user: createdUser,
+    };
+  }
+
+  async login(e: string, p: string, rte: number) {
+    const userExists = await this.userRepo.findByEmail(e);
+
+    if (!userExists) {
+      throw AppError.unauthorized("Invalid credentials");
+    }
+
+    const { passwordHash, ...user } = userExists;
+
+    const isPassCorrect = await verifyPassword(p, passwordHash);
+
+    if (!isPassCorrect) {
+      throw AppError.unauthorized("Invalid credentials");
+    }
+
+    const refreshToken = await this.saveRefreshToken(user.id, rte);
+
+    return {
+      refreshToken,
+      user,
     };
   }
 }

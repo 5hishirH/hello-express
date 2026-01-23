@@ -6,7 +6,7 @@ import {
   HttpResponse,
   IRequest,
 } from "../utils/index.js";
-import { RegisterInput } from "../validators/index.js";
+import { LoginInput, RegisterInput } from "../validators/index.js";
 import { AuthResponse } from "../dtos/index.js";
 import { CookieOptions } from "express";
 
@@ -20,6 +20,8 @@ interface AuthService {
     },
     expiry: number,
   ): Promise<AuthResponse>;
+
+  login(email: string, password: string, expiry: number): Promise<AuthResponse>;
 }
 
 interface CheckImage {
@@ -85,4 +87,22 @@ export class AuthController {
       );
     },
   );
+
+  login = asyncHandler(async (req: IRequest<{}, LoginInput>, res: Response) => {
+    const { email, password } = req.body;
+
+    const { user, refreshToken } = await this.s.login(
+      email,
+      password,
+      this.rCfg.expiry,
+    );
+
+    // handle session
+    this.createSession(req, user.id, user.role);
+
+    // handle refresh token
+    this.handleRefreshCookie(res, refreshToken);
+
+    return HttpResponse.ok(res, user, "The user is logged in successfully");
+  });
 }
