@@ -60,6 +60,9 @@ const authService = new AuthService(
   refreshTokenRepository,
   fileStore,
 );
+
+const profilePicEndpointSuffix = "api/v1/user/profile/pic";
+
 const authController = new AuthController(checkImage, authService, {
   name: cfg.REFRESH_COOKIE_NAME,
   expiry: cfg.REFRESH_EXPIRY,
@@ -70,7 +73,10 @@ const authRoutes = registerAuthRoutes(authController);
 app.use("/api/v1/auth", authRoutes);
 
 const userService = new UserService(userRepository);
-const userController = new UserController(userService);
+const userController = new UserController(
+  userService,
+  profilePicEndpointSuffix,
+);
 const userRoutes = registerUserRoutes(userController);
 app.use("/api/v1/user", userRoutes);
 
