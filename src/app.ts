@@ -75,6 +75,7 @@ app.use("/api/v1/auth", authRoutes);
 const userService = new UserService(userRepository);
 const userController = new UserController(
   userService,
+  fileStore,
   profilePicEndpointSuffix,
 );
 const userRoutes = registerUserRoutes(userController);

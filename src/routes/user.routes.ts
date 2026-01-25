@@ -7,6 +7,8 @@ function registerRoutes(c: UserController) {
 
   r.route("/profile").get(authenticate, c.profile);
 
+  r.route("/profile/pic").get(authenticate, c.streamProfilePic);
+
   return r;
 }
 
