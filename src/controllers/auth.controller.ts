@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import {
   AppError,
   asyncHandler,
-  checkFileType,
   HttpResponse,
   IRequest,
 } from "../utils/index.js";
@@ -40,6 +39,7 @@ export class AuthController {
     private checkImage: CheckImage,
     private s: AuthService,
     private rCfg: RefreshCookieConfig,
+    private sessionCookieName: string = "connect.sid",
   ) {}
 
   private createSession(req: Request, userId: number, role: "admin" | "user") {
@@ -47,13 +47,19 @@ export class AuthController {
     req.session.userRole = role;
   }
 
-  private handleRefreshCookie(res: Response, token: string): void {
+  private setRefreshCookie(res: Response, token: string): void {
     res.cookie(this.rCfg.name, token, {
       maxAge: this.rCfg.expiry,
       httpOnly: true,
       secure: this.rCfg.isSecure,
       sameSite: this.rCfg.sameSite,
     });
+  }
+
+  private clearAuthCookie(r: Response): void {
+    r.clearCookie(this.sessionCookieName);
+
+    r.clearCookie(this.rCfg.name);
   }
 
   register = asyncHandler(
@@ -78,7 +84,7 @@ export class AuthController {
       this.createSession(req, user.id, user.role);
 
       // handle refresh token
-      this.handleRefreshCookie(res, refreshToken);
+      this.setRefreshCookie(res, refreshToken);
 
       return HttpResponse.created(
         res,
@@ -101,8 +107,20 @@ export class AuthController {
     this.createSession(req, user.id, user.role);
 
     // handle refresh token
-    this.handleRefreshCookie(res, refreshToken);
+    this.setRefreshCookie(res, refreshToken);
 
     return HttpResponse.ok(res, user, "The user is logged in successfully");
+  });
+
+  logout = asyncHandler(async (req: IRequest, res: Response) => {
+    req.session.destroy((err) => {
+      if (err) {
+        throw new Error("Could not logout");
+      }
+    });
+
+    this.clearAuthCookie(res);
+
+    return HttpResponse.noContent(res);
   });
 }
