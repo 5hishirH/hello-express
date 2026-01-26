@@ -9,7 +9,8 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "drizzle:generate": "drizzle-kit generate",
-    "drizzle:migrate": "drizzle-kit migrate"
+    "drizzle:migrate": "drizzle-kit migrate",
+    "drizzle:migrate-neon": "drizzle-kit migrate --config=drizzle-neon.config.ts"
   },
   "keywords": [],
   "author": "Shishir Halder",
