@@ -16,17 +16,21 @@ interface FileStore {
   getStream(key: string): Promise<{ stream: Readable; contentType: string }>;
 }
 
+interface RequestUrlResolver {
+  resolve(r: Request): string;
+}
+
 export class UserController {
   constructor(
     private s: UserService,
     private storage: FileStore,
-    private profilePicEndpointSuffix: string,
+    private requestUrlResolver: RequestUrlResolver,
   ) {}
 
   profile = asyncHandler(async (req: Request, res: Response) => {
     const user = await this.s.profile(req.session.userId!);
 
-    user.profilePic = `${req.protocol}://${req.get("host")}/${this.profilePicEndpointSuffix}`;
+    user.profilePic = this.requestUrlResolver.resolve(req);
 
     return HttpResponse.ok(res, user, "Profile data is retrieved successfully");
   });
@@ -44,13 +48,6 @@ export class UserController {
 
     const result = await this.storage.getStream(user.profilePic);
 
-    res.setHeader("Content-Type", result.contentType);
-
-    result.stream.pipe(res);
-
-    result.stream.on("error", (err) => {
-      console.error("Stream error:", err);
-      res.end();
-    });
+    return HttpResponse.stream(res, result.stream, result.contentType);
   });
 }

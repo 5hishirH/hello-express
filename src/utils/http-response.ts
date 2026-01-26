@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { Readable } from "stream";
 
 export class HttpResponse {
   static ok<T>(
@@ -59,5 +60,16 @@ export class HttpResponse {
 
   static noContent(res: Response) {
     return res.status(204).send();
+  }
+
+  static stream(r: Response, s: Readable, ct: string) {
+    r.setHeader("Content-Type", ct);
+
+    s.pipe(r);
+
+    s.on("error", (err) => {
+      console.error("Stream error:", err);
+      r.end();
+    });
   }
 }

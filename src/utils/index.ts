@@ -5,3 +5,4 @@ export * from "./http-response.js";
 export * from "./check-file-type.js";
 export * from "./sha-256-hash.js";
 export * from "./hash-password.js";
+export * from "./request-url-resolver.js";

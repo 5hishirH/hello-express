@@ -15,7 +15,7 @@ import {
   RefreshTokenRepository,
   UserRepository,
 } from "./repositories/index.js";
-import { checkFileType } from "./utils/index.js";
+import { checkFileType, RequestUrlResolver } from "./utils/index.js";
 
 const app = express();
 
@@ -61,7 +61,8 @@ const authService = new AuthService(
   fileStore,
 );
 
-const profilePicEndpointSuffix = "api/v1/user/profile/pic";
+const profilePicPath = "/api/v1/user/profile/pic";
+const requestUrlResolver = new RequestUrlResolver(profilePicPath);
 
 const authController = new AuthController(checkImage, authService, {
   name: cfg.REFRESH_COOKIE_NAME,
@@ -76,7 +77,7 @@ const userService = new UserService(userRepository);
 const userController = new UserController(
   userService,
   fileStore,
-  profilePicEndpointSuffix,
+  requestUrlResolver,
 );
 const userRoutes = registerUserRoutes(userController);
 app.use("/api/v1/user", userRoutes);
