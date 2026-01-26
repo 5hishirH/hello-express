@@ -7,7 +7,6 @@ import { AuthController, UserController } from "./controllers/index.js";
 import { AuthService, UserService } from "./services/index.js";
 import registerAuthRoutes from "./routes/auth.routes.js";
 import registerUserRoutes from "./routes/user.routes.js";
-import { StringValue } from "ms";
 import "dotenv/config";
 import { Pool } from "pg";
 import { cfg } from "./configs/index.js";
@@ -15,7 +14,7 @@ import {
   RefreshTokenRepository,
   UserRepository,
 } from "./repositories/index.js";
-import { checkFileType, RequestUrlResolver } from "./utils/index.js";
+import { FileTypeChecker, RequestUrlResolver } from "./utils/index.js";
 
 const app = express();
 
@@ -46,7 +45,6 @@ app.get("/", (_, res) => {
 
 const userRepository = new UserRepository(pgPool);
 const refreshTokenRepository = new RefreshTokenRepository(pgPool);
-const checkImage = checkFileType(["jpg", "png", "webp"]);
 
 const fileStore = new S3Store(
   cfg.STORAGE_ENDPOINT,
@@ -55,6 +53,9 @@ const fileStore = new S3Store(
   cfg.STORAGE_BUCKET,
   cfg.STORAGE_REGION,
 );
+
+const imageChecker = new FileTypeChecker(["jpg", "png", "webp"]);
+
 const authService = new AuthService(
   userRepository,
   refreshTokenRepository,
@@ -64,7 +65,7 @@ const authService = new AuthService(
 const profilePicPath = "/api/v1/user/profile/pic";
 const requestUrlResolver = new RequestUrlResolver(profilePicPath);
 
-const authController = new AuthController(checkImage, authService, {
+const authController = new AuthController(imageChecker, authService, {
   name: cfg.REFRESH_COOKIE_NAME,
   expiry: cfg.REFRESH_EXPIRY,
   sameSite: cfg.NODE_ENV === "code_server" ? "none" : cfg.COOKIE_SAMESITE,

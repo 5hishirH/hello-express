@@ -23,8 +23,8 @@ interface AuthService {
   login(email: string, password: string, expiry: number): Promise<AuthResponse>;
 }
 
-interface CheckImage {
-  (buffer: Buffer): Promise<{ ext: string; mime: string }>;
+interface ImageChecker {
+  check(buffer: Buffer): Promise<{ ext: string; mime: string }>;
 }
 
 interface RefreshCookieConfig {
@@ -36,7 +36,7 @@ interface RefreshCookieConfig {
 
 export class AuthController {
   constructor(
-    private checkImage: CheckImage,
+    private imageChecker: ImageChecker,
     private s: AuthService,
     private rCfg: RefreshCookieConfig,
     private sessionCookieName: string = "connect.sid",
@@ -71,7 +71,7 @@ export class AuthController {
 
       const { buffer } = req.file;
 
-      const { ext, mime } = await this.checkImage(buffer);
+      const { ext, mime } = await this.imageChecker.check(buffer);
 
       const { user, refreshToken } = await this.s.register(
         req.body,
