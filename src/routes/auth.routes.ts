@@ -15,6 +15,8 @@ function registerRoutes(c: AuthController) {
 
   r.route("/login").post(validate(loginSchema), c.login);
 
+  r.route("/refresh").post(c.refresh);
+
   r.route("/logout").post(authenticate, c.logout);
 
   return r;

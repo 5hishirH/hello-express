@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { getTableColumns, relations } from "drizzle-orm";
 import {
   pgEnum,
   pgTable,
@@ -58,4 +58,6 @@ export const sessions = pgTable(
 
 export type NewUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-export type NewToken = typeof refreshTokens.$inferInsert;
+export type NewRefreshToken = typeof refreshTokens.$inferInsert;
+export type RefreshToken = typeof refreshTokens.$inferSelect;
+export const { passwordHash: _, ...userColumns } = getTableColumns(users);

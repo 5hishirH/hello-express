@@ -1,4 +1,5 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import expressSession from "express-session";
 import createPgStore from "connect-pg-simple";
 import { S3Store } from "./file-store/index.js";
@@ -14,12 +15,17 @@ import {
   RefreshTokenRepository,
   UserRepository,
 } from "./repositories/index.js";
-import { FileTypeChecker, RequestUrlResolver } from "./utils/index.js";
+import {
+  FileNameGenerator,
+  FileTypeChecker,
+  RequestUrlResolver,
+} from "./utils/index.js";
 
 const app = express();
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 const pgPool = new Pool({ connectionString: cfg.DATABASE_URL });
 
@@ -56,10 +62,15 @@ const fileStore = new S3Store(
 
 const imageChecker = new FileTypeChecker(["jpg", "png", "webp"]);
 
+const profilePicPathInStorage = "profile-pictures";
+const profilePicNameGen = new FileNameGenerator(profilePicPathInStorage)
+  .generate;
+
 const authService = new AuthService(
   userRepository,
   refreshTokenRepository,
   fileStore,
+  profilePicNameGen,
 );
 
 const profilePicPath = "/api/v1/user/profile/pic";
@@ -74,10 +85,15 @@ const authController = new AuthController(imageChecker, authService, {
 const authRoutes = registerAuthRoutes(authController);
 app.use("/api/v1/auth", authRoutes);
 
-const userService = new UserService(userRepository);
+const userService = new UserService(
+  userRepository,
+  fileStore,
+  profilePicNameGen,
+);
 const userController = new UserController(
   userService,
   fileStore,
+  imageChecker,
   requestUrlResolver,
 );
 const userRoutes = registerUserRoutes(userController);

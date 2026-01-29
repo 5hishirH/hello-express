@@ -1,13 +1,17 @@
 import { Router } from "express";
 import { UserController } from "../controllers/index.js";
-import { authenticate } from "../middlewares/index.js";
+import { authenticate, uploadSingle } from "../middlewares/index.js";
 
 function registerRoutes(c: UserController) {
   const r = Router();
 
-  r.route("/profile").get(authenticate, c.profile);
+  r.use(authenticate);
 
-  r.route("/profile/pic").get(authenticate, c.streamProfilePic);
+  r.route("/profile").get(c.getProfile).patch(c.updateProfile);
+
+  r.route("/profile/pic")
+    .get(c.streamProfilePic)
+    .patch(uploadSingle("profilePic"), c.udpateProfilePic);
 
   return r;
 }

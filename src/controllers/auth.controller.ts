@@ -5,22 +5,40 @@ import {
   HttpResponse,
   IRequest,
 } from "../utils/index.js";
-import { LoginInput, RegisterInput } from "../validators/index.js";
-import { AuthResponse } from "../dtos/index.js";
+import {
+  LoginInput,
+  refreshTokenSchema,
+  RegisterInput,
+} from "../validators/index.js";
+import { AuthResponse, UserDto } from "../dtos/index.js";
 import { CookieOptions } from "express";
+import { ZodError } from "zod";
+
+interface ServiceFile {
+  buffer: Buffer;
+  meta: {
+    ext: string;
+    mime: string;
+  };
+}
 
 interface AuthService {
   register(
     user: RegisterInput,
-    buffer: Buffer,
-    fileMeta: {
-      ext: string;
-      mime: string;
-    },
+    file: ServiceFile,
     expiry: number,
   ): Promise<AuthResponse>;
 
   login(email: string, password: string, expiry: number): Promise<AuthResponse>;
+
+  refresh(
+    refreshToken: string,
+    refreshTokenDuration: number,
+  ): Promise<{
+    userId: number;
+    userRole: UserDto["role"];
+    newRefreshToken: string;
+  }>;
 }
 
 interface ImageChecker {
@@ -71,12 +89,13 @@ export class AuthController {
 
       const { buffer } = req.file;
 
-      const { ext, mime } = await this.imageChecker.check(buffer);
+      const meta = await this.imageChecker.check(buffer);
+
+      const file = { buffer, meta };
 
       const { user, refreshToken } = await this.s.register(
         req.body,
-        buffer,
-        { ext, mime },
+        file,
         this.rCfg.expiry,
       );
 
@@ -110,6 +129,31 @@ export class AuthController {
     this.setRefreshCookie(res, refreshToken);
 
     return HttpResponse.ok(res, user, "The user is logged in successfully");
+  });
+
+  refresh = asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const refreshToken = req.cookies[this.rCfg.name];
+
+      const parsedStr = refreshTokenSchema.parse(refreshToken);
+
+      const { userId, userRole, newRefreshToken } = await this.s.refresh(
+        parsedStr,
+        this.rCfg.expiry,
+      );
+
+      this.createSession(req, userId, userRole);
+
+      this.setRefreshCookie(res, newRefreshToken);
+
+      return HttpResponse.ok(res, {}, "Token refreshed successfully");
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw AppError.unauthorized();
+      }
+
+      throw error;
+    }
   });
 
   logout = asyncHandler(async (req: IRequest, res: Response) => {

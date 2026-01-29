@@ -1,9 +1,4 @@
-import { createHash, timingSafeEqual, randomBytes } from "crypto";
-
-export function generateRandomString(): string {
-  const token = randomBytes(32).toString("hex");
-  return token;
-}
+import { createHash, timingSafeEqual } from "crypto";
 
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

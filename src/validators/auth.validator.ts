@@ -15,5 +15,8 @@ export const loginSchema = z.object({
   }),
 });
 
+export const refreshTokenSchema = z.string().nonempty();
+
 export type LoginInput = z.infer<typeof loginSchema>["body"];
 export type RegisterInput = z.infer<typeof registerSchema>["body"];
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;

@@ -1,40 +1,97 @@
-import { AuthResponse } from "../dtos/index.js";
+import { AuthResponse, UserDto } from "../dtos/index.js";
 import { RegisterInput } from "../validators/index.js";
-import {
-  AppError,
-  FileStore,
-  generateRandomString,
-  hashPassword,
-  hashToken,
-  verifyPassword,
-} from "../utils/index.js";
-import { NewToken, NewUser, User } from "../db/schema.js";
+import { AppError, FileStore } from "../utils/index.js";
+import { NewRefreshToken, NewUser, RefreshToken, User } from "../db/schema.js";
+import bcrypt from "bcryptjs";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 interface UserRepository {
-  create(newUser: NewUser): Promise<void>;
+  create(newUser: NewUser): Promise<UserDto | undefined>;
   findByEmail(email: string): Promise<User | undefined>;
+  userExists(email: string): Promise<Boolean>;
+  findById(uid: number): Promise<UserDto | undefined>;
 }
 
 interface RefreshTokenRepository {
-  create(payload: NewToken): Promise<void>;
+  create(payload: NewRefreshToken): Promise<void>;
+  findByToken(tokenHash: string): Promise<RefreshToken | undefined>;
+}
+
+interface File {
+  buffer: Buffer;
+  meta: {
+    ext: string;
+    mime: string;
+  };
+}
+
+interface ProfilePicNameGenerator {
+  (meta: { fileName?: string; ext: string }): string;
 }
 
 export class AuthService {
+  private SALT_ROUNDS = 10;
+
   constructor(
     private userRepo: UserRepository,
     private refreshTokenRepo: RefreshTokenRepository,
     private fileStore: FileStore,
-    private folderName: string = "profile-pictures",
+    private picNameGen: ProfilePicNameGenerator,
   ) {}
+
+  private async hashPassword(password: string): Promise<string> {
+    try {
+      const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
+      const hash = await bcrypt.hash(password, salt);
+      return hash;
+    } catch (error) {
+      throw new Error("Password Hasing failed");
+    }
+  }
+
+  private async verifyPassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
+    try {
+      const isMatch = await bcrypt.compare(password, hash);
+      return isMatch;
+    } catch (error) {
+      throw new Error("Password verification failed");
+    }
+  }
+
+  private randStrGen(): string {
+    const token = randomBytes(32).toString("hex");
+    return token;
+  }
+
+  private hashToken(token: string): string {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
+  private verifyToken(candidateToken: string, storedHash: string): boolean {
+    const candidateHash = this.hashToken(candidateToken);
+
+    const candidateBuffer = Buffer.from(candidateHash, "utf8");
+    const storedBuffer = Buffer.from(storedHash, "utf8");
+
+    if (candidateBuffer.length !== storedBuffer.length) {
+      return false;
+    }
+
+    // Constant-time comparison
+    return timingSafeEqual(candidateBuffer, storedBuffer);
+  }
 
   private async saveRefreshToken(
     uid: number,
-    e: number,
+    duration: number,
     timestamp: Date = new Date(),
   ): Promise<string> {
-    const refreshToken = generateRandomString();
-    const refreshTokenHash = hashToken(refreshToken);
-    const refreshTokenExpiry = new Date(Date.now() + e);
+    const refreshToken = this.randStrGen();
+    const refreshTokenHash = this.hashToken(refreshToken);
+    const refreshTokenExpiry = new Date(Date.now() + duration);
 
     await this.refreshTokenRepo.create({
       tokenHash: refreshTokenHash,
@@ -49,26 +106,22 @@ export class AuthService {
 
   async register(
     u: RegisterInput,
-    buffer: Buffer,
-    fileMeta: {
-      ext: string;
-      mime: string;
-    },
+    file: File,
     refreshTokenDuration: number,
   ): Promise<AuthResponse> {
-    const userExists = await this.userRepo.findByEmail(u.email);
+    const emailExists = await this.userRepo.userExists(u.email);
 
-    if (userExists) {
+    if (emailExists) {
       throw AppError.conflict(
         "The email is already associated with an account",
       );
     }
 
-    const fileName = `${this.folderName}/${u.email}.${fileMeta.ext}`;
+    const fileName = this.picNameGen({ fileName: u.email, ext: file.meta.ext });
 
-    await this.fileStore.put(fileName, buffer, fileMeta.mime);
+    await this.fileStore.put(fileName, file.buffer, file.meta.mime);
 
-    const passwordHash = await hashPassword(u.password);
+    const passwordHash = await this.hashPassword(u.password);
     const timestamp = new Date();
 
     const candidateUser: NewUser = {
@@ -81,30 +134,26 @@ export class AuthService {
       updatedAt: timestamp,
     };
 
-    await this.userRepo.create(candidateUser);
+    const user = await this.userRepo.create(candidateUser);
 
-    const result = await this.userRepo.findByEmail(u.email);
-
-    if (!result) {
-      throw new Error("User entry to db failed");
+    if (!user) {
+      throw new Error("User registration failed");
     }
 
-    const { passwordHash: _, ...createdUser } = result;
-
     const refreshToken = await this.saveRefreshToken(
-      createdUser.id,
+      user.id,
       refreshTokenDuration,
       timestamp,
     );
 
     return {
       refreshToken,
-      user: createdUser,
+      user,
     };
   }
 
-  async login(e: string, p: string, rte: number) {
-    const userExists = await this.userRepo.findByEmail(e);
+  async login(email: string, password: string, refreshTokenExpiry: number) {
+    const userExists = await this.userRepo.findByEmail(email);
 
     if (!userExists) {
       throw AppError.unauthorized("Invalid credentials");
@@ -112,17 +161,52 @@ export class AuthService {
 
     const { passwordHash, ...user } = userExists;
 
-    const isPassCorrect = await verifyPassword(p, passwordHash);
+    const isPassCorrect = await this.verifyPassword(password, passwordHash);
 
     if (!isPassCorrect) {
       throw AppError.unauthorized("Invalid credentials");
     }
 
-    const refreshToken = await this.saveRefreshToken(user.id, rte);
+    const refreshToken = await this.saveRefreshToken(
+      user.id,
+      refreshTokenExpiry,
+    );
 
     return {
       refreshToken,
       user,
     };
+  }
+
+  async refresh(
+    refreshToken: string,
+    refreshTokenDuration: number,
+  ): Promise<{
+    userId: number;
+    userRole: UserDto["role"];
+    newRefreshToken: string;
+  }> {
+    const tokenHash = this.hashToken(refreshToken);
+
+    const tokenExists = await this.refreshTokenRepo.findByToken(tokenHash);
+
+    if (!tokenExists) {
+      throw AppError.unauthorized();
+    }
+
+    const uid: number = tokenExists.userId;
+
+    const newRefreshToken: string = await this.saveRefreshToken(
+      uid,
+      refreshTokenDuration,
+    );
+
+    const user = await this.userRepo.findById(uid);
+
+    if (!user) {
+      throw new Error("Refresh token failed");
+    }
+
+    return { userId: user.id, userRole: user.role, newRefreshToken };
   }
 }
